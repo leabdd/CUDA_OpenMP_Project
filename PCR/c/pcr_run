@@ -22,7 +22,9 @@ module load cuda/11.6
 
 # Start your application.
 echo "PCRSolve: "
-srun ./pcrsolve 10000000
+srun ./pcrsolve_omp 10000000
+
+echo ""
 
 echo "PCRSolveGPU: "
-srun ./pcrsolve_gpu 10000000
+srun ./pcrsolve_cuda 10000000

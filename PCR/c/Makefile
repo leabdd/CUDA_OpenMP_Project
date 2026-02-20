@@ -1,32 +1,53 @@
+NVCC := nvcc
+NVCC_FLAGS := -O2 -arch=sm_86
+
 CC := gcc
 CFLAGS := -O2 -Wall -Wextra
 OPENMP_FLAGS := -fopenmp
+
 LIBS := -lm
-LINK_FLAGS := $(OPENMP_FLAGS) $(LIBS)
+CUDA_LIBS := -lm -lcuda
+LINK_FLAGS := $(LIBS)
 
 # Library source files
-LIB_FILES := sle.c diagonal.c pcr.c
-LIB_OBJS := $(LIB_FILES:.c=.o)
+C_FILES := sle.c diagonal.c
+C_OBJS := $(C_FILES:.c=.o)
+
+# OMP version
+OMP_PCR := pcr.c
+OMP_PCR_OBJ := pcr.o
+
+# CUDA version
+CU_PCR := pcr.cu
+CU_PCR_OBJ := pcr_cuda.o
 
 # Executables
-TARGETS := pcrsolve
+TARGETS := pcrsolve_omp pcrsolve_cuda
 
 # Default target
 .PHONY: all
 all: $(TARGETS)
 
-# Build the object files from library sources
-$(LIB_OBJS): %.o: %.c
+# Build C object files from library sources
+%.o: %.c
 	$(CC) $(CFLAGS) $(OPENMP_FLAGS) -c $< -o $@
 
-# Build pcrsolve executable
-pcrsolve: main.c $(LIB_OBJS)
+# Build CUDA PCR object file
+$(CU_PCR_OBJ): $(CU_PCR)
+	$(NVCC) $(NVCC_FLAGS) -c $< -o $@
+
+# Build OMP version executable
+pcrsolve_omp: main.c $(C_OBJS) $(OMP_PCR_OBJ)
 	$(CC) $(CFLAGS) -DPCR_MAIN $(OPENMP_FLAGS) $^ $(LIBS) -o $@
+
+# Build CUDA version executable
+pcrsolve_cuda: main.c $(C_OBJS) $(CU_PCR_OBJ)
+	$(NVCC) $(NVCC_FLAGS) -DPCR_MAIN $^ $(CUDA_LIBS) -o $@
 
 # Clean build artifacts
 .PHONY: clean
 clean:
-	rm -f $(LIB_OBJS) $(TARGETS)
+	rm -f $(C_OBJS) $(OMP_PCR_OBJ) $(CU_PCR_OBJ) $(TARGETS)
 
 # Clean everything including executables
 .PHONY: distclean
@@ -36,8 +57,9 @@ distclean: clean
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  all          - Build pcrsolve and thomassolve (default)"
-	@echo "  pcrsolve     - Build pcrsolve executable"
-	@echo "  clean        - Remove object files and executables"
-	@echo "  distclean    - Remove all generated files"
-	@echo "  help         - Show this help message"
+	@echo "  all            - Build both pcrsolve_omp and pcrsolve_cuda (default)"
+	@echo "  pcrsolve_omp   - Build OMP version"
+	@echo "  pcrsolve_cuda  - Build CUDA GPU version"
+	@echo "  clean          - Remove object files and executables"
+	@echo "  distclean      - Remove all generated files"
+	@echo "  help           - Show this help message"

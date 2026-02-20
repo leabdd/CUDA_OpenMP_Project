@@ -7,7 +7,11 @@
 
 #if defined(PCR_MAIN)
 #define func(system, start, end) pcr(system, start, end)
+#ifdef __CUDA_ARCH__
+#define SOLVER_NAME "PCR GPU"
+#else
 #define SOLVER_NAME "PCR"
+#endif
 #else
 #define func(system, start, end) -1
 #define SOLVER_NAME
