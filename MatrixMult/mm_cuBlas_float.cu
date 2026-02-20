@@ -56,15 +56,18 @@ double matrix_mult_gpu(const Matrix A, const Matrix B, const Matrix C, const int
     Matrix Ad, Bd, Cd;
     cublasHandle_t handle;
 
-    TIME_GET(start);
+
 
     CUDA_ERR_CHECK(cudaMalloc(&Ad, size));
     CUDA_ERR_CHECK(cudaMalloc(&Bd, size));
     CUDA_ERR_CHECK(cudaMalloc(&Cd, size));
-    CUDA_ERR_CHECK(cudaMemcpy(Ad, A, size, cudaMemcpyHostToDevice));
-    CUDA_ERR_CHECK(cudaMemcpy(Bd, B, size, cudaMemcpyHostToDevice));
 
     CUBLAS_ERR_CHECK(cublasCreate(&handle));
+
+    TIME_GET(start);
+
+    CUDA_ERR_CHECK(cudaMemcpy(Ad, A, size, cudaMemcpyHostToDevice));
+    CUDA_ERR_CHECK(cudaMemcpy(Bd, B, size, cudaMemcpyHostToDevice));
 
     // cuBLAS calculates C = alpha*op(A)*op(B) + beta*C
     const float alpha = 1.0f;
@@ -87,13 +90,13 @@ double matrix_mult_gpu(const Matrix A, const Matrix B, const Matrix C, const int
 
     CUDA_ERR_CHECK(cudaMemcpy(C, Cd, size, cudaMemcpyDeviceToHost));
 
+    TIME_GET(end);
+
     CUBLAS_ERR_CHECK(cublasDestroy(handle));
 
     CUDA_ERR_CHECK(cudaFree(Ad));
     CUDA_ERR_CHECK(cudaFree(Bd));
     CUDA_ERR_CHECK(cudaFree(Cd));
-
-    TIME_GET(end);
 
     return TIME_DIFF(start, end);
 }

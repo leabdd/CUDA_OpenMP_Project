@@ -89,7 +89,9 @@ double matrix_mult_gpu(const Matrix A, const Matrix B, const Matrix C, const int
     CUDA_ERR_CHECK(cudaMalloc(&Ad, size));
     CUDA_ERR_CHECK(cudaMalloc(&Bd, size));
     CUDA_ERR_CHECK(cudaMalloc(&Cd, size));
+
     TIME_GET(start);
+
     CUDA_ERR_CHECK(cudaMemcpy(Ad, A, size, cudaMemcpyHostToDevice));
     CUDA_ERR_CHECK(cudaMemcpy(Bd, B, size, cudaMemcpyHostToDevice));
 
@@ -104,6 +106,7 @@ double matrix_mult_gpu(const Matrix A, const Matrix B, const Matrix C, const int
     CUDA_ERR_CHECK(cudaGetLastError());
 
     CUDA_ERR_CHECK(cudaMemcpy(C, Cd, size, cudaMemcpyDeviceToHost));
+    
     TIME_GET(end);
 
     cudaFree(Ad);
