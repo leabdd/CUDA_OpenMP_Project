@@ -98,6 +98,8 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     float *d_tmp_a, *d_tmp_b, *d_tmp_c, *d_tmp_d;   // Temporary arrays for updates
     float *d_x;                                     // Solution vector
 
+    TIME_GET(*start);
+    
     CUDA_ERR_CHECK(cudaMalloc(&d_a, n * sizeof(float)));
     CUDA_ERR_CHECK(cudaMalloc(&d_b, n * sizeof(float)));
     CUDA_ERR_CHECK(cudaMalloc(&d_c, n * sizeof(float)));
@@ -107,8 +109,6 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     CUDA_ERR_CHECK(cudaMalloc(&d_tmp_c, n * sizeof(float)));
     CUDA_ERR_CHECK(cudaMalloc(&d_tmp_d, n * sizeof(float)));
     CUDA_ERR_CHECK(cudaMalloc(&d_x, n * sizeof(float)));
-
-    TIME_GET(*start);
 
     // Copy initial data to GPU
     CUDA_ERR_CHECK(cudaMemcpy(d_a, sle->a->data, n * sizeof(float), cudaMemcpyHostToDevice));

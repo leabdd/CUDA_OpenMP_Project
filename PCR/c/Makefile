@@ -21,12 +21,20 @@ OMP_PCR_OBJ := pcr.o
 CU_PCR := pcr.cu
 CU_PCR_OBJ := pcr_cuda.o
 
+# OMP GPU version
+OMP_GPU_PCR := pcr_omp_gpu.c
+OMP_GPU_PCR_OBJ := pcr_omp_gpu.o
+
 # Executables
-TARGETS := pcrsolve_omp pcrsolve_cuda
+TARGETS := pcrsolve_omp pcrsolve_cuda pcrsolve_omp_gpu
 
 # Default target
 .PHONY: all
 all: $(TARGETS)
+
+# Build OMP GPU PCR object file
+$(OMP_GPU_PCR_OBJ): $(OMP_GPU_PCR)
+	$(NVCC) $(NVCC_FLAGS) -Xcompiler -fopenmp -c $< -o $@
 
 # Build C object files from library sources
 %.o: %.c
@@ -44,10 +52,14 @@ pcrsolve_omp: main.c $(C_OBJS) $(OMP_PCR_OBJ)
 pcrsolve_cuda: main.c $(C_OBJS) $(CU_PCR_OBJ)
 	$(NVCC) $(NVCC_FLAGS) -DPCR_MAIN $^ $(CUDA_LIBS) -o $@
 
+# Build OMP GPU version executable
+pcrsolve_omp_gpu: main.c $(C_OBJS) $(OMP_GPU_PCR_OBJ)
+	$(NVCC) $(NVCC_FLAGS) -Xcompiler -fopenmp -DPCR_MAIN $^ $(CUDA_LIBS) -o $@
+
 # Clean build artifacts
 .PHONY: clean
 clean:
-	rm -f $(C_OBJS) $(OMP_PCR_OBJ) $(CU_PCR_OBJ) $(TARGETS)
+	rm -f $(C_OBJS) $(OMP_PCR_OBJ) $(CU_PCR_OBJ) $(OMP_GPU_PCR_OBJ) $(TARGETS)
 
 # Clean everything including executables
 .PHONY: distclean
@@ -57,9 +69,10 @@ distclean: clean
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  all            - Build both pcrsolve_omp and pcrsolve_cuda (default)"
-	@echo "  pcrsolve_omp   - Build OMP version"
-	@echo "  pcrsolve_cuda  - Build CUDA GPU version"
-	@echo "  clean          - Remove object files and executables"
-	@echo "  distclean      - Remove all generated files"
-	@echo "  help           - Show this help message"
+	@echo "  all            	- Build both pcrsolve_omp, pcrsolve_cuda and pcrsolve_omp_gpu (default)"
+	@echo "  pcrsolve_omp   	- Build OMP version"
+	@echo "  pcrsolve_cuda  	- Build CUDA GPU version"
+	@echo "  pcrsolve_omp_gpu  	- Build OMP GPU version"
+	@echo "  clean          	- Remove object files and executables"
+	@echo "  distclean      	- Remove all generated files"
+	@echo "  help           	- Show this help message"

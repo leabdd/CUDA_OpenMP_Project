@@ -6,7 +6,6 @@
 #SBATCH --output=./logs/out.%j
 #SBATCH --error=./logs/err.%j
 #SBATCH --nodes=1          # number of nodes
-#SBATCH --ntasks=24         # number of processor cores (i.e. tasks)
 #SBATCH --exclusive
 #SBATCH --time=00:30:00    # walltime
 #SBATCH --gres=gpu:1
@@ -22,9 +21,14 @@ module load cuda/11.6
 
 # Start your application.
 echo "PCRSolve: "
-srun ./pcrsolve_omp 10000000
+srun ./pcrsolve_omp 50000000
 
 echo ""
 
 echo "PCRSolveGPU: "
-srun ./pcrsolve_cuda 10000000
+srun ./pcrsolve_cuda 50000000
+
+echo ""
+
+echo "PCRSolveOMP_GPU: "
+srun ./pcrsolve_omp_gpu 50000000
