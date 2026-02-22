@@ -17,18 +17,100 @@ set -e
 # Load environment modules for your application here.
 source /etc/profile.d/modules.sh
 module purge
-module load cuda/11.6
+module load cuda/12.0
+export OMP_NUM_THREADS=24
 
 # Start your application.
 echo "PCRSolve: "
-srun ./pcrsolve_omp 50000000
+echo "5.000 equations:" 
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000
+echo ""
+echo "500.000 equations:"
+srun --cpus-per-task=24 ./pcrsolve_omp.run 500000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 500000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 500000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 500000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 500000
+echo ""
+echo "5.000.000 equations:"
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 5000000
+echo ""
+echo "50.000.000 equations:"
+srun --cpus-per-task=24 ./pcrsolve_omp.run 50000000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 50000000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 50000000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 50000000
+srun --cpus-per-task=24 ./pcrsolve_omp.run 50000000
 
+echo ""
 echo ""
 
 echo "PCRSolveGPU: "
-srun ./pcrsolve_cuda 50000000
+echo "5.000 equations:"
+srun ./pcrsolve_cuda.run 5000
+srun ./pcrsolve_cuda.run 5000
+srun ./pcrsolve_cuda.run 5000
+srun ./pcrsolve_cuda.run 5000
+srun ./pcrsolve_cuda.run 5000
+echo ""
+echo "500.000 equations:"
+srun ./pcrsolve_cuda.run 500000
+srun ./pcrsolve_cuda.run 500000
+srun ./pcrsolve_cuda.run 500000
+srun ./pcrsolve_cuda.run 500000
+srun ./pcrsolve_cuda.run 500000
+echo ""
+echo "5.000.000 equations:"
+srun ./pcrsolve_cuda.run 5000000
+srun ./pcrsolve_cuda.run 5000000
+srun ./pcrsolve_cuda.run 5000000
+srun ./pcrsolve_cuda.run 5000000
+srun ./pcrsolve_cuda.run 5000000
+echo ""
+echo "50.000.000 equations:"
+srun ./pcrsolve_cuda.run 50000000
+srun ./pcrsolve_cuda.run 50000000
+srun ./pcrsolve_cuda.run 50000000
+srun ./pcrsolve_cuda.run 50000000
+srun ./pcrsolve_cuda.run 50000000
 
 echo ""
+echo ""
 
+export OMP_NUM_THREADS=1
 echo "PCRSolveOMP_GPU: "
-srun ./pcrsolve_omp_gpu 50000000
+echo "5.000 equations:"
+srun ./pcrsolve_omp_gpu.run 5000
+srun ./pcrsolve_omp_gpu.run 5000
+srun ./pcrsolve_omp_gpu.run 5000
+srun ./pcrsolve_omp_gpu.run 5000
+srun ./pcrsolve_omp_gpu.run 5000
+echo ""
+echo "500.000 equations:"
+srun ./pcrsolve_omp_gpu.run 500000
+srun ./pcrsolve_omp_gpu.run 500000
+srun ./pcrsolve_omp_gpu.run 500000
+srun ./pcrsolve_omp_gpu.run 500000
+srun ./pcrsolve_omp_gpu.run 500000
+echo ""
+echo "5.000.000 equations:"
+srun ./pcrsolve_omp_gpu.run 5000000
+srun ./pcrsolve_omp_gpu.run 5000000
+srun ./pcrsolve_omp_gpu.run 5000000
+srun ./pcrsolve_omp_gpu.run 5000000
+srun ./pcrsolve_omp_gpu.run 5000000
+echo ""
+echo "50.000.000 equations:"
+srun ./pcrsolve_omp_gpu.run 50000000
+srun ./pcrsolve_omp_gpu.run 50000000
+srun ./pcrsolve_omp_gpu.run 50000000
+srun ./pcrsolve_omp_gpu.run 50000000
+srun ./pcrsolve_omp_gpu.run 50000000

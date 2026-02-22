@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Do not forget to select a proper partition if
+# the default one is no fit for the job!
+
+#SBATCH --output=./logs/out.%j
+#SBATCH --error=./logs/err.%j
+#SBATCH --nodes=1          # number of nodes
+#SBATCH --exclusive
+#SBATCH --time=00:30:00    # walltime
+#SBATCH --gres=gpu:1
+#SBATCH --reservation=pram 
+
+# Stop operation on first error.
+set -e
+
+# Load environment modules for your application here.
+source /etc/profile.d/modules.sh
+module purge
+module load cuda/12.0
+
+echo "PCRSolveGPU: "
+srun nsys profile -f true -o pcrsolve_cuda -t cuda,osrt,nvtx --stats=true ./pcrsolve_cuda_nsys.run 50000000
+
+echo ""
+
+echo "PCRSolveOMP_GPU: "
+srun nsys profile -f true -o pcrsolve_omp_gpu -t cuda,openmp,nvtx --stats=true ./pcrsolve_omp_gpu.run 50000000
