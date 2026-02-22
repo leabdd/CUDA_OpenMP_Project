@@ -6,7 +6,7 @@
 #SBATCH --output=./logs/out.%j
 #SBATCH --error=./logs/err.%j
 #SBATCH --nodes=1          # number of nodes
-# SBATCH --ntasks=1         # number of processor cores (i.e. tasks)
+#SBATCH --ntasks=1         # number of processor cores (i.e. tasks)
 #SBATCH --exclusive
 #SBATCH --time=01:00:00    # walltime
 #SBATCH --gres=gpu:1
