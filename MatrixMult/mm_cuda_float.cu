@@ -152,14 +152,20 @@ int calc_mat(const int N, bool use_tiling) {
     return 0;
 }
 
-int main() {
-    calc_mat(1 << 11, false); // 2048
-    calc_mat(1 << 11, true);  // 2048
-    calc_mat(1 << 12, false); // 4096
-    calc_mat(1 << 12, true);  // 4096
-    calc_mat(1 << 13, false); // 8192
-    calc_mat(1 << 13, true);  // 8192
-    calc_mat(1 << 14, false); // 16384
-    calc_mat(1 << 14, true);  // 16384
+int main(char *argv[], int argc) {
+    if (argc != 3) {
+        printf("Usage: %s <matrix_size> <use_tiling (true or false)>\n", argv[0]);
+        return -1;
+    }
+
+    int N = atoi(argv[1]);
+    if (N <= 32 || N % 32 != 0) {
+        printf("Matrix size must be a positive multiple of 32.\n");
+        return -1;
+    }
+
+    bool use_tiling = (strcmp(argv[2], "true") == 0);
+
+    calc_mat(N, use_tiling);
     return 0;
 }

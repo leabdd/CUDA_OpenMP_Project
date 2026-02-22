@@ -147,10 +147,18 @@ int calc_mat(const int N) {
     return 0;
 }
 
-int main() {
-    calc_mat(1 << 11);  // 2048
-    calc_mat(1 << 12);  // 4096
-    calc_mat(1 << 13);  // 8192
-    calc_mat(1 << 14);  // 16384
+int main(char *argv[], int argc) {
+    if (argc != 2) {
+        printf("Usage: %s <matrix_size>\n", argv[0]);
+        return -1;
+    }
+
+    int N = atoi(argv[1]);
+    if (N <= 32 || N % 32 != 0) {
+        printf("Matrix size must be a positive multiple of 32.\n");
+        return -1;
+    }
+
+    calc_mat(N);
     return 0;
 }

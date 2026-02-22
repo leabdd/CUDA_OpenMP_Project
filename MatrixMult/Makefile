@@ -17,21 +17,21 @@ LINK_FLAGS = -lcrypto
 
 # DEP_SRCS = md5sum.c
 
-all: mm_cuda_double mm_cuda_float mm_cuBlas_double mm_cuBlas_float
+all: mm_cuda_double.run mm_cuda_float.run mm_cuBlas_double.run mm_cuBlas_float.run
 
 #ma_seq: seq.c ${DEP_SRCS}
 #	$(CC) $(CC_FLAGS) ${LINK_FLAGS} -o $@ $^
 
-mm_cuda_double: mm_cuda_double.cu ${DEP_SRCS}
+mm_cuda_double.run: mm_cuda_double.cu ${DEP_SRCS}
 	$(CUDA_CC) $(CC_FLAGS) $(CUDA_FLAGS) ${LINK_FLAGS} -o $@ $^
 
-mm_cuda_float: mm_cuda_float.cu ${DEP_SRCS}
+mm_cuda_float.run: mm_cuda_float.cu ${DEP_SRCS}
 	$(CUDA_CC) $(CC_FLAGS) $(CUDA_FLAGS) ${LINK_FLAGS} -o $@ $^
 
-mm_cuBlas_double: mm_cuBlas_double.cu ${DEP_SRCS}
+mm_cuBlas_double.run: mm_cuBlas_double.cu ${DEP_SRCS}
 	$(CUDA_CC) $(CC_FLAGS) $(CUDA_FLAGS) -lcublas ${LINK_FLAGS} -o $@ $^
 
-mm_cuBlas_float: mm_cuBlas_float.cu ${DEP_SRCS}
+mm_cuBlas_float.run: mm_cuBlas_float.cu ${DEP_SRCS}
 	$(CUDA_CC) $(CC_FLAGS) $(CUDA_FLAGS) -lcublas ${LINK_FLAGS} -o $@ $^
 
 #ma_omp: omp.c ${DEP_SRCS}
@@ -47,4 +47,4 @@ mm_cuBlas_float: mm_cuBlas_float.cu ${DEP_SRCS}
 #	$(ICPX) $(CC_FLAGS) $(ICPX_FLAGS) ${LINK_FLAGS} -o $@ $^
 
 clean:
-	rm -f mm_cuda_double mm_cuda_float mm_cuBlas_double mm_cuBlas_float
+	rm -f mm_cuda_double.run mm_cuda_float.run mm_cuBlas_double.run mm_cuBlas_float.run
