@@ -24,7 +24,9 @@
 
 // Computes decoupling coefficients for PCR update step
 __device__ inline float compute_decoupling_coeffs(float decoupling_value, float into_value) {
-    return -__fdividef(into_value, decoupling_value == 0 ? EPSILON : decoupling_value);
+    // return -__fdividef(into_value, (decoupling_value == 0 ? EPSILON : decoupling_value));
+    // fast div is less accurate, in this case no runtime difference observed, so using regular division for better accuracy
+    return -into_value / (decoupling_value == 0 ? EPSILON : decoupling_value);
 }
 
 // Perform one level of PCR elimination to decouple equations
@@ -71,7 +73,9 @@ __global__ void back_substitution_kernel(float *d, float *b,
     int i = blockIdx.x * blockDim.x + threadIdx.x;
   
     if (i < n) {
-        x[i] = __fdividef(d[i], b[i]);
+        // x[i] = __fdividef(d[i], b[i]); 
+        // fast div is less accurate, in this case no runtime difference observed, so using regular division for better accuracy
+        x[i] = d[i] / b[i];
     }
 }
 
@@ -97,8 +101,6 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     float *d_a, *d_b, *d_c, *d_d;                   // Current coefficient arrays
     float *d_tmp_a, *d_tmp_b, *d_tmp_c, *d_tmp_d;   // Temporary arrays for updates
     float *d_x;                                     // Solution vector
-
-    TIME_GET(*start);
     
     CUDA_ERR_CHECK(cudaMalloc(&d_a, n * sizeof(float)));
     CUDA_ERR_CHECK(cudaMalloc(&d_b, n * sizeof(float)));
@@ -110,11 +112,14 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     CUDA_ERR_CHECK(cudaMalloc(&d_tmp_d, n * sizeof(float)));
     CUDA_ERR_CHECK(cudaMalloc(&d_x, n * sizeof(float)));
 
+    TIME_GET(*start);
+
     // Copy initial data to GPU
-    CUDA_ERR_CHECK(cudaMemcpy(d_a, sle->a->data, n * sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_ERR_CHECK(cudaMemcpy(d_b, sle->b->data, n * sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_ERR_CHECK(cudaMemcpy(d_c, sle->c->data, n * sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_ERR_CHECK(cudaMemcpy(d_d, sle->d->data, n * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_ERR_CHECK(cudaMemcpyAsync(d_a, sle->a->data, n * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_ERR_CHECK(cudaMemcpyAsync(d_b, sle->b->data, n * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_ERR_CHECK(cudaMemcpyAsync(d_c, sle->c->data, n * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_ERR_CHECK(cudaMemcpyAsync(d_d, sle->d->data, n * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_ERR_CHECK(cudaDeviceSynchronize());
 
     // Requires log2(n) iterations to fully decouple the matrix
     size_t total_levels = (size_t)ceil(log2((float)n));
@@ -129,7 +134,7 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
                                                     d_tmp_a, d_tmp_b, d_tmp_c, d_tmp_d,
                                                     (int)n, stride);
         CUDA_ERR_CHECK(cudaPeekAtLastError());
-        // CUDA_ERR_CHECK(cudaDeviceSynchronize());
+        CUDA_ERR_CHECK(cudaDeviceSynchronize());
 
         // Swap current and temporary arrays for next iteration (in-place update)
         float *swap;
@@ -155,7 +160,7 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     CUDA_ERR_CHECK(cudaPeekAtLastError());
 
     // Copy results back to host
-    CUDA_ERR_CHECK(cudaMemcpy(sle->x->data, d_x, n * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_ERR_CHECK(cudaMemcpyAsync(sle->x->data, d_x, n * sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_ERR_CHECK(cudaDeviceSynchronize());
 
     TIME_GET(*end);
