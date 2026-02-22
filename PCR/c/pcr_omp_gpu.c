@@ -13,10 +13,11 @@
 
 #define EPSILON 1e-30
 
-static inline float compute_decoupling_coeffs(float decoupling_value,
+// when including this with pragma omp declare target this function makes the code much slower, so we inline it and duplicate the logic in the kernel instead
+/* static inline float compute_decoupling_coeffs(float decoupling_value,
                                               float into_value) {
   return -into_value / (decoupling_value == 0 ? EPSILON : decoupling_value);
-}
+} */
 
 int pcr(triSLE_t *sle, timer *start, timer *end) {
   if (sle == NULL) {
@@ -101,16 +102,17 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
         }
     }
 
+    // Added SIMD directive, but seen no performance improvement
     // Back substitution kernel
     if (total_levels % 2 == 1) {
         // Odd Levels: Results are in swap arrays
-        #pragma omp target teams distribute parallel for
+        #pragma omp target teams distribute parallel for simd
         for (size_t i = 0; i < n; i++) {
             x_data[i] = d_swap[i] / b_swap[i];
         }
     } else {
         // Even Levels: Results are in original arrays
-        #pragma omp target teams distribute parallel for
+        #pragma omp target teams distribute parallel for simd
         for (size_t i = 0; i < n; i++) {
             x_data[i] = d_data[i] / b_data[i];
         }
