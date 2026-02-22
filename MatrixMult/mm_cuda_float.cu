@@ -27,7 +27,7 @@ char *getMD5DigestStr(Matrix m, int N) {
     char *retval, *ptr;
 
     MD5_Init(&ctx);
-    MD5_Update(&ctx, m, N * N);
+    MD5_Update(&ctx, m, N * N * sizeof(float));
     MD5_Final(sum, &ctx);
 
     retval = (char *)calloc(MD5_DIGEST_LENGTH * 2 + 1, sizeof(*retval));
