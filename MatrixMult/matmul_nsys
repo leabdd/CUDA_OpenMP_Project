@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Do not forget to select a proper partition if
+# the default one is no fit for the job!
+
+#SBATCH --output=./logs/out.%j
+#SBATCH --error=./logs/err.%j
+#SBATCH --nodes=1          # number of nodes
+# SBATCH --ntasks=1         # number of processor cores (i.e. tasks)
+#SBATCH --exclusive
+#SBATCH --time=01:00:00    # walltime
+#SBATCH --gres=gpu:1
+#SBATCH --reservation=pram 
+
+# Stop operation on first error.
+set -e
+
+# Load environment modules for your application here.
+source /etc/profile.d/modules.sh
+module purge
+module load cuda/12.0
+
+# Actual work starting here.
+
+echo "cuBLAS Single Precision Matrix Multiplication"
+echo "========================================="
+echo "16384x16384 matrices:"
+srun nsys profile -f true -o matmul_fcublas -t cuda,osrt,nvtx --stats=true ./mm_cuBlas_float.run 16384
+echo ""
+
+echo ""
+
+echo "CUDA Single Precision Matrix Multiplication"
+echo "========================================="
+echo "16384x16384 matrices without tiling:"
+srun nsys profile -f true -o matmul_fcuda_no_tiling -t cuda,osrt,nvtx --stats=true ./mm_cuda_float.run 16384 false
+echo ""
+echo "16384x16384 matrices with tiling:"
+srun nsys profile -f true -o matmul_fcuda_tiling -t cuda,osrt,nvtx --stats=true ./mm_cuda_float.run 16384 true
+
+echo ""
+
+echo "cuBLAS Double Precision Matrix Multiplication"
+echo "========================================="
+echo "16384x16384 matrices:"
+srun nsys profile -f true -o matmul_dcublas -t cuda,osrt,nvtx --stats=true ./mm_cuBlas_double.run 16384
+
+echo ""
+
+echo "CUDA Double Precision Matrix Multiplication"
+echo "========================================="
+echo "16384x16384 matrices without tiling:"
+srun nsys profile -f true -o matmul_dcuda_no_tiling -t cuda,osrt,nvtx --stats=true ./mm_cuda_double.run 16384 false
+echo ""
+echo "16384x16384 matrices with tiling:"
+srun nsys profile -f true -o matmul_dcuda_tiling -t cuda,osrt,nvtx --stats=true ./mm_cuda_double.run 16384 true
