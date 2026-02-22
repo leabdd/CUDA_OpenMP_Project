@@ -147,7 +147,7 @@ int calc_mat(const int N) {
     return 0;
 }
 
-int main(char *argv[], int argc) {
+int main(int argc, char *argv[]) {
     if (argc != 2) {
         printf("Usage: %s <matrix_size>\n", argv[0]);
         return -1;

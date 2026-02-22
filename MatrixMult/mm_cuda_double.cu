@@ -153,7 +153,7 @@ int calc_mat(const int N, bool use_tiling) {
     return 0;
 }
 
-int main(char *argv[], int argc) {
+int main(int argc, char *argv[]) {
     if (argc != 3) {
         printf("Usage: %s <matrix_size> <use_tiling (true or false)>\n", argv[0]);
         return -1;
