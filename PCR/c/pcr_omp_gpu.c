@@ -27,8 +27,6 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     return 0; // Nothing to do
   }
 
-  TIME_GET(*start);
-
   size_t total_levels = (size_t)ceil(log2((float)n));
 
   float *a_swap = (float *)malloc(n * sizeof(float));
@@ -44,101 +42,82 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     return -1;
   }
 
-  // Extract pointers for OpenMP map clauses (NVCC doesn't handle pointer deref in maps)
+  // Extract pointers for OpenMP map clauses - keep these fixed for the map region
   float *a_data = sle->a->data;
   float *b_data = sle->b->data;
   float *c_data = sle->c->data;
   float *d_data = sle->d->data;
   float *x_data = sle->x->data;
 
+  // Use separate pointers for tracking current arrays (avoid swapping mapped pointers)
+  float *a_src, *b_src, *c_src, *d_src;
+  float *a_dst, *b_dst, *c_dst, *d_dst;
+
+  TIME_GET(*start);
+  
   // Map data pointers to GPU for duration of computation
-  #pragma omp target enter data map(to: a_data[0:n], b_data[0:n], c_data[0:n], d_data[0:n], x_data[0:n]) \
-                                  map(alloc: a_swap[0:n], b_swap[0:n], c_swap[0:n], d_swap[0:n])
-
-  #pragma omp target
+  // Create data region so memory stays on the GPU between iterations
+  #pragma omp target data map(to: a_data[0:n], b_data[0:n], c_data[0:n], d_data[0:n]) \
+                        map(alloc: a_swap[0:n], b_swap[0:n], c_swap[0:n], d_swap[0:n]) \
+                        map(from: x_data[0:n])
   {
-    // All iterations run on GPU
+    // Sequential loop runs on the host
     for (size_t level = 0; level < total_levels; level++) {
-      size_t stride = 1 << level;
-      
-      // Call update_kernel directly because NVCC doesnt allow nested pragma inside function call.
-      #pragma omp parallel for
-      for (int i = 0; i < (int)n; i++) {
-        int iRight = i + (int)stride;
-        int iLeft = i - (int)stride;
+        size_t stride = 1 << level;
+        
+        // Determine current and next array pointers without modifying the mapped ones
+        if (level % 2 == 0) {
+          a_src = a_data; b_src = b_data; c_src = c_data; d_src = d_data;
+          a_dst = a_swap; b_dst = b_swap; c_dst = c_swap; d_dst = d_swap;
+        } else {
+          a_src = a_swap; b_src = b_swap; c_src = c_swap; d_src = d_swap;
+          a_dst = a_data; b_dst = b_data; c_dst = c_data; d_dst = d_data;
+        }
+        
+        // Update Step Kernel runs on GPU
+        #pragma omp target teams distribute parallel for
+        for (int i = 0; i < (int)n; i++) {
+            int iRight = i + (int)stride;
+            int iLeft = i - (int)stride;
 
-        float decoupling_value = iLeft < 0 ? 1.f : b_data[iLeft];
-        const float alpha = -a_data[i] / (decoupling_value == 0 ? EPSILON : decoupling_value);
+            float decoupling_value = iLeft < 0 ? 1.f : b_src[iLeft];
+            const float alpha = -a_src[i] / (decoupling_value == 0 ? 1e-9f : decoupling_value);
 
-        decoupling_value = iRight < (int)n ? b_data[iRight] : 1.f;
-        const float gamma = -c_data[i] / (decoupling_value == 0 ? EPSILON : decoupling_value);
+            decoupling_value = iRight < (int)n ? b_src[iRight] : 1.f;
+            const float gamma = -c_src[i] / (decoupling_value == 0 ? 1e-9f : decoupling_value);
 
-        /* const float alpha =
-            compute_decoupling_coeffs(iLeft < 0 ? 1.f : b_data[iLeft], a_data[i]);
-        const float gamma =
-            compute_decoupling_coeffs(iRight < (int)n ? b_data[iRight] : 1.f, c_data[i]);
- */
-        const float sa_iLeft = iLeft < 0 ? 0.0f : a_data[iLeft];
-        const float sc_iLeft = iLeft < 0 ? 0.0f : c_data[iLeft];
-        const float sd_iLeft = iLeft < 0 ? 0.0f : d_data[iLeft];
+            const float sa_iLeft = iLeft < 0 ? 0.0f : a_src[iLeft];
+            const float sc_iLeft = iLeft < 0 ? 0.0f : c_src[iLeft];
+            const float sd_iLeft = iLeft < 0 ? 0.0f : d_src[iLeft];
 
-        const float sa_iRight = iRight >= (int)n ? 0.0f : a_data[iRight];
-        const float sc_iRight = iRight >= (int)n ? 0.0f : c_data[iRight];
-        const float sd_iRight = iRight >= (int)n ? 0.0f : d_data[iRight];
+            const float sa_iRight = iRight >= (int)n ? 0.0f : a_src[iRight];
+            const float sc_iRight = iRight >= (int)n ? 0.0f : c_src[iRight];
+            const float sd_iRight = iRight >= (int)n ? 0.0f : d_src[iRight];
 
-        a_swap[i] = alpha * sa_iLeft;
-        c_swap[i] = gamma * sc_iRight;
-        b_swap[i] = b_data[i] + alpha * sc_iLeft + gamma * sa_iRight;
-        d_swap[i] = d_data[i] + alpha * sd_iLeft + gamma * sd_iRight;
-      }
-
-      // Swap pointers within target region (valid for device pointers)
-      float *tmp;
-      tmp = a_data;
-      a_data = a_swap;
-      a_swap = tmp;
-
-      tmp = b_data;
-      b_data = b_swap;
-      b_swap = tmp;
-
-      tmp = c_data;
-      c_data = c_swap;
-      c_swap = tmp;
-
-      tmp = d_data;
-      d_data = d_swap;
-      d_swap = tmp;
+            a_dst[i] = alpha * sa_iLeft;
+            c_dst[i] = gamma * sc_iRight;
+            b_dst[i] = b_src[i] + alpha * sc_iLeft + gamma * sa_iRight;
+            d_dst[i] = d_src[i] + alpha * sd_iLeft + gamma * sd_iRight;
+        }
     }
 
-    // Back substitution: x[i] = d[i] / b[i]
-    #pragma omp teams distribute parallel for simd
-    for (size_t i = 0; i < n; i++) {
-      x_data[i] = d_data[i] / b_data[i];
+    // Back substitution kernel
+    if (total_levels % 2 == 1) {
+        // Odd Levels: Results are in swap arrays
+        #pragma omp target teams distribute parallel for
+        for (size_t i = 0; i < n; i++) {
+            x_data[i] = d_swap[i] / b_swap[i];
+        }
+    } else {
+        // Even Levels: Results are in original arrays
+        #pragma omp target teams distribute parallel for
+        for (size_t i = 0; i < n; i++) {
+            x_data[i] = d_data[i] / b_data[i];
+        }
     }
-  }
-
-  // Exit target data region and copy results back to host
-  #pragma omp target exit data map(from: x_data[0:n]) \
-                               map(release: a_data[0:n], b_data[0:n], c_data[0:n], d_data[0:n]) \
-                               map(delete: a_swap[0:n], b_swap[0:n], c_swap[0:n], d_swap[0:n])
+  } // Data is automatically copied back to x_data on the host here
 
   TIME_GET(*end);
-
-  // If total_levels is odd, pointers were swapped an odd number of times
-  // Need to copy data from temporary buffers back to original SLE arrays
-  /* if ((total_levels % 2) != 0) {
-    memcpy(sle->a->data, a_swap, n * sizeof(float));
-    memcpy(sle->b->data, b_swap, n * sizeof(float));
-    memcpy(sle->c->data, c_swap, n * sizeof(float));
-    memcpy(sle->d->data, d_swap, n * sizeof(float));
-  } else {
-    // Even swaps: data is in a_data, b_data, c_data, d_data
-    memcpy(sle->a->data, a_data, n * sizeof(float));
-    memcpy(sle->b->data, b_data, n * sizeof(float));
-    memcpy(sle->c->data, c_data, n * sizeof(float));
-    memcpy(sle->d->data, d_data, n * sizeof(float));
-  } */
 
   free(a_swap);
   free(b_swap);
