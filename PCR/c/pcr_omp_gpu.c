@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <string.h>
-
 #define EPSILON 1e-30
 
 // when including this with pragma omp declare target this function makes the code much slower, so we inline it and duplicate the logic in the kernel instead
@@ -76,7 +74,8 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
         }
         
         // Update Step Kernel runs on GPU
-        #pragma omp target teams distribute parallel for
+      #pragma omp target teams distribute parallel for map(present: a_src[0:n], b_src[0:n], \
+                        c_src[0:n], d_src[0:n], a_dst[0:n], b_dst[0:n], c_dst[0:n], d_dst[0:n])
         for (int i = 0; i < (int)n; i++) {
             int iRight = i + (int)stride;
             int iLeft = i - (int)stride;
@@ -106,13 +105,15 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     // Back substitution kernel
     if (total_levels % 2 == 1) {
         // Odd Levels: Results are in swap arrays
-        #pragma omp target teams distribute parallel for simd
+        #pragma omp target teams distribute parallel for simd map(present: b_swap[0:n], \
+                            d_swap[0:n], x_data[0:n])
         for (size_t i = 0; i < n; i++) {
             x_data[i] = d_swap[i] / b_swap[i];
         }
     } else {
         // Even Levels: Results are in original arrays
-        #pragma omp target teams distribute parallel for simd
+        #pragma omp target teams distribute parallel for simd map(present: b_data[0:n], \
+                            d_data[0:n], x_data[0:n])
         for (size_t i = 0; i < n; i++) {
             x_data[i] = d_data[i] / b_data[i];
         }
