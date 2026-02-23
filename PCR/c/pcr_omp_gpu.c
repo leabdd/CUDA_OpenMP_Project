@@ -62,60 +62,67 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
   {
     // Sequential loop runs on the host
     for (size_t level = 0; level < total_levels; level++) {
-        size_t stride = 1 << level;
-        
-        // Determine current and next array pointers without modifying the mapped ones
-        if (level % 2 == 0) {
-          a_src = a_data; b_src = b_data; c_src = c_data; d_src = d_data;
-          a_dst = a_swap; b_dst = b_swap; c_dst = c_swap; d_dst = d_swap;
-        } else {
-          a_src = a_swap; b_src = b_swap; c_src = c_swap; d_src = d_swap;
-          a_dst = a_data; b_dst = b_data; c_dst = c_data; d_dst = d_data;
-        }
-        
-        // Update Step Kernel runs on GPU
+      size_t stride = 1 << level;
+      
+      // Determine current and next array pointers without modifying the mapped ones
+      if (level % 2 == 0) {
+        a_src = a_data; b_src = b_data; c_src = c_data; d_src = d_data;
+        a_dst = a_swap; b_dst = b_swap; c_dst = c_swap; d_dst = d_swap;
+      } else {
+        a_src = a_swap; b_src = b_swap; c_src = c_swap; d_src = d_swap;
+        a_dst = a_data; b_dst = b_data; c_dst = c_data; d_dst = d_data;
+      }
+      
+      // Update Step Kernel runs on GPU
       #pragma omp target teams distribute parallel for map(present: a_src[0:n], b_src[0:n], \
                         c_src[0:n], d_src[0:n], a_dst[0:n], b_dst[0:n], c_dst[0:n], d_dst[0:n])
-        for (int i = 0; i < (int)n; i++) {
-            int iRight = i + (int)stride;
-            int iLeft = i - (int)stride;
+      for (int i = 0; i < (int)n; i++) {
+        int iRight = i + (int)stride;
+        int iLeft = i - (int)stride;
 
-            float decoupling_value = iLeft < 0 ? 1.f : b_src[iLeft];
-            const float alpha = -a_src[i] / (decoupling_value == 0 ? 1e-9f : decoupling_value);
+        // Directly inlining the decoupling coefficient made the code faster.
+        // Even more benefit was achieved by using the reciprocal and then multiplying instead.
+        float decoupling_value = iLeft < 0 ? 1.f : b_src[iLeft];
+        const float inv = 1.0f / (decoupling_value == 0 ? EPSILON : decoupling_value);
+        const float alpha = -a_src[i] * inv;
 
-            decoupling_value = iRight < (int)n ? b_src[iRight] : 1.f;
-            const float gamma = -c_src[i] / (decoupling_value == 0 ? 1e-9f : decoupling_value);
+        decoupling_value = iRight < (int)n ? b_src[iRight] : 1.f;
+        const float inv2 = 1.0f / (decoupling_value == 0 ? EPSILON : decoupling_value);
+        const float gamma = -c_src[i] * inv2;
 
-            const float sa_iLeft = iLeft < 0 ? 0.0f : a_src[iLeft];
-            const float sc_iLeft = iLeft < 0 ? 0.0f : c_src[iLeft];
-            const float sd_iLeft = iLeft < 0 ? 0.0f : d_src[iLeft];
+        const float sa_iLeft = iLeft < 0 ? 0.0f : a_src[iLeft];
+        const float sc_iLeft = iLeft < 0 ? 0.0f : c_src[iLeft];
+        const float sd_iLeft = iLeft < 0 ? 0.0f : d_src[iLeft];
 
-            const float sa_iRight = iRight >= (int)n ? 0.0f : a_src[iRight];
-            const float sc_iRight = iRight >= (int)n ? 0.0f : c_src[iRight];
-            const float sd_iRight = iRight >= (int)n ? 0.0f : d_src[iRight];
+        const float sa_iRight = iRight >= (int)n ? 0.0f : a_src[iRight];
+        const float sc_iRight = iRight >= (int)n ? 0.0f : c_src[iRight];
+        const float sd_iRight = iRight >= (int)n ? 0.0f : d_src[iRight];
 
-            a_dst[i] = alpha * sa_iLeft;
-            c_dst[i] = gamma * sc_iRight;
-            b_dst[i] = b_src[i] + alpha * sc_iLeft + gamma * sa_iRight;
-            d_dst[i] = d_src[i] + alpha * sd_iLeft + gamma * sd_iRight;
-        }
+        a_dst[i] = alpha * sa_iLeft;
+        c_dst[i] = gamma * sc_iRight;
+        b_dst[i] = b_src[i] + alpha * sc_iLeft + gamma * sa_iRight;
+        d_dst[i] = d_src[i] + alpha * sd_iLeft + gamma * sd_iRight;
+      }
     }
 
     // Added SIMD directive, but seen no performance improvement
     // Back substitution kernel
+    // Reciprocal and multiply instead of division for better performance
     if (total_levels % 2 == 1) {
         // Odd Levels: Results are in swap arrays
         #pragma omp target teams distribute parallel for simd map(present: b_swap[0:n], \
                             d_swap[0:n], x_data[0:n])
         for (size_t i = 0; i < n; i++) {
-            x_data[i] = d_swap[i] / b_swap[i];
+          const float inv = 1.0f / b_swap[i];
+          x_data[i] = d_swap[i] * inv;
         }
     } else {
         // Even Levels: Results are in original arrays
         #pragma omp target teams distribute parallel for simd map(present: b_data[0:n], \
                             d_data[0:n], x_data[0:n])
         for (size_t i = 0; i < n; i++) {
-            x_data[i] = d_data[i] / b_data[i];
+          const float inv = 1.0f / b_data[i];
+          x_data[i] = d_data[i] * inv;
         }
     }
   } // Data is automatically copied back to x_data on the host here
