@@ -24,17 +24,16 @@
 
 // Computes decoupling coefficients for PCR update step
 __device__ inline float compute_decoupling_coeffs(float decoupling_value, float into_value) {
-    // return -__fdividef(into_value, (decoupling_value == 0 ? EPSILON : decoupling_value));
-    // fast div is less accurate, in this case no runtime difference observed, so using regular division for better accuracy
-    return -into_value / (decoupling_value == 0 ? EPSILON : decoupling_value);
+    // Using fast division for better performance, leads to some accuracy loss 
+    return -__fdividef(into_value, (decoupling_value == 0 ? EPSILON : decoupling_value));
 }
 
 // Perform one level of PCR elimination to decouple equations
 // Each thread updates one equation based on its neighbors at distance 'stride'
-__global__ void update_step_kernel(float *sa, float *sb,
-                                    float *sc, float *sd,
-                                    float *tmp_a, float *tmp_b,
-                                    float *tmp_c, float *tmp_d,
+__global__ void update_step_kernel(float *__restrict__ sa, float *__restrict__ sb,
+                                    float *__restrict__ sc, float *__restrict__ sd,
+                                    float *__restrict__ tmp_a, float *__restrict__ tmp_b,
+                                    float *__restrict__ tmp_c, float *__restrict__ tmp_d,
                                     int n, int stride) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   
@@ -68,14 +67,13 @@ __global__ void update_step_kernel(float *sa, float *sb,
 }
 
 // When matrix is diagonal, solution is x[i] = d[i] / b[i]
-__global__ void back_substitution_kernel(float *d, float *b,
-                                         float *x, int n) {
+__global__ void back_substitution_kernel(float *__restrict__ d, float *__restrict__ b,
+                                         float *__restrict__ x, int n) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
   
     if (i < n) {
-        // x[i] = __fdividef(d[i], b[i]); 
-        // fast div is less accurate, in this case no runtime difference observed, so using regular division for better accuracy
-        x[i] = d[i] / b[i];
+        // Using fast division for better performance, leads to some accuracy loss
+        x[i] = __fdividef(d[i], b[i]); 
     }
 }
 
@@ -134,7 +132,6 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
                                                     d_tmp_a, d_tmp_b, d_tmp_c, d_tmp_d,
                                                     (int)n, stride);
         CUDA_ERR_CHECK(cudaPeekAtLastError());
-        CUDA_ERR_CHECK(cudaDeviceSynchronize());
 
         // Swap current and temporary arrays for next iteration (in-place update)
         float *swap;
