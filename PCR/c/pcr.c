@@ -69,7 +69,7 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
 
   TIME_GET(*start);
 
-  size_t total_levels = (size_t)ceil(log2((float)n));
+  size_t total_levels = (size_t)ceil(log2((float)n + 1.));
 
   float *a_data_tmp = (float *)malloc(n * sizeof(float));
   float *b_data_tmp = (float *)malloc(n * sizeof(float));
@@ -111,38 +111,41 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     sle->x->data[i] = sle->d->data[i] / sle->b->data[i];
   }
 
-  // If total_levels is odd, the pointers have been swapped an odd number of
-  // times. sle->...->data is pointing to the temporary buffers and ..._data_tmp
-  // is pointing to the original buffers. We need to copy the data back to the
-  // original buffers and restore the pointers so the caller gets the correct
-  // final state and we free the correct memory.
-  if ((total_levels % 2) != 0) {
-    // Copy data from temporary buffers to original buffers
-    memcpy(a_data_tmp, sle->a->data, n * sizeof(float));
-    memcpy(b_data_tmp, sle->b->data, n * sizeof(float));
-    memcpy(c_data_tmp, sle->c->data, n * sizeof(float));
-    memcpy(d_data_tmp, sle->d->data, n * sizeof(float));
+  // // If total_levels is odd, the pointers have been swapped an odd number of
+  // // times. sle->...->data is pointing to the temporary buffers and
+  // ..._data_tmp
+  // // is pointing to the original buffers. We need to copy the data back to
+  // the
+  // // original buffers and restore the pointers so the caller gets the correct
+  // // final state and we free the correct memory.
+  // if ((total_levels % 2) != 0) {
+  //   // Copy data from temporary buffers to original buffers
+  //   memcpy(a_data_tmp, sle->a->data, n * sizeof(float));
+  //   memcpy(b_data_tmp, sle->b->data, n * sizeof(float));
+  //   memcpy(c_data_tmp, sle->c->data, n * sizeof(float));
+  //   memcpy(d_data_tmp, sle->d->data, n * sizeof(float));
 
-    // Swap pointers back. After this, sle->...->data will point to the original
-    // buffers (which now have the correct data), and ..._data_tmp will point
-    // to the temporary buffers, which can then be safely freed.
-    float *swap;
-    swap = sle->a->data;
-    sle->a->data = a_data_tmp;
-    a_data_tmp = swap;
+  //   // Swap pointers back. After this, sle->...->data will point to the
+  //   original
+  //   // buffers (which now have the correct data), and ..._data_tmp will point
+  //   // to the temporary buffers, which can then be safely freed.
+  //   float *swap;
+  //   swap = sle->a->data;
+  //   sle->a->data = a_data_tmp;
+  //   a_data_tmp = swap;
 
-    swap = sle->b->data;
-    sle->b->data = b_data_tmp;
-    b_data_tmp = swap;
+  //   swap = sle->b->data;
+  //   sle->b->data = b_data_tmp;
+  //   b_data_tmp = swap;
 
-    swap = sle->c->data;
-    sle->c->data = c_data_tmp;
-    c_data_tmp = swap;
+  //   swap = sle->c->data;
+  //   sle->c->data = c_data_tmp;
+  //   c_data_tmp = swap;
 
-    swap = sle->d->data;
-    sle->d->data = d_data_tmp;
-    d_data_tmp = swap;
-  }
+  //   swap = sle->d->data;
+  //   sle->d->data = d_data_tmp;
+  //   d_data_tmp = swap;
+  // }
 
   TIME_GET(*end);
 

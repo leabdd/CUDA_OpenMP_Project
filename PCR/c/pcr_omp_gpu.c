@@ -26,7 +26,7 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     return 0; // Nothing to do
   }
 
-  size_t total_levels = (size_t)ceil(log2((float)n));
+  size_t total_levels = (size_t)ceil(log2((float)n + 1.));
 
   float *a_swap = (float *)malloc(n * sizeof(float));
   float *b_swap = (float *)malloc(n * sizeof(float));
@@ -83,12 +83,12 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
         // Directly inlining the decoupling coefficient made the code faster.
         // Even more benefit was achieved by using the reciprocal and then multiplying instead.
         float decoupling_value = iLeft < 0 ? 1.f : b_src[iLeft];
-        const float inv = 1.0f / (decoupling_value == 0 ? EPSILON : decoupling_value);
+        float inv = 1.0f / (decoupling_value == 0 ? EPSILON : decoupling_value);
         const float alpha = -a_src[i] * inv;
 
         decoupling_value = iRight < (int)n ? b_src[iRight] : 1.f;
-        const float inv2 = 1.0f / (decoupling_value == 0 ? EPSILON : decoupling_value);
-        const float gamma = -c_src[i] * inv2;
+        inv = 1.0f / (decoupling_value == 0 ? EPSILON : decoupling_value);
+        const float gamma = -c_src[i] * inv;
 
         const float sa_iLeft = iLeft < 0 ? 0.0f : a_src[iLeft];
         const float sc_iLeft = iLeft < 0 ? 0.0f : c_src[iLeft];
@@ -108,22 +108,11 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     // Added SIMD directive, but seen no performance improvement
     // Back substitution kernel
     // Reciprocal and multiply instead of division for better performance
-    if (total_levels % 2 == 1) {
-        // Odd Levels: Results are in swap arrays
-        #pragma omp target teams distribute parallel for simd map(present: b_swap[0:n], \
-                            d_swap[0:n], x_data[0:n])
-        for (size_t i = 0; i < n; i++) {
-          const float inv = 1.0f / b_swap[i];
-          x_data[i] = d_swap[i] * inv;
-        }
-    } else {
-        // Even Levels: Results are in original arrays
-        #pragma omp target teams distribute parallel for simd map(present: b_data[0:n], \
-                            d_data[0:n], x_data[0:n])
-        for (size_t i = 0; i < n; i++) {
-          const float inv = 1.0f / b_data[i];
-          x_data[i] = d_data[i] * inv;
-        }
+    #pragma omp target teams distribute parallel for simd map(present: b_data[0:n], \
+                        d_data[0:n], x_data[0:n])
+    for (size_t i = 0; i < n; i++) {
+      const float inv = 1.0f / b_data[i];
+      x_data[i] = d_data[i] * inv;
     }
   } // Data is automatically copied back to x_data on the host here
 

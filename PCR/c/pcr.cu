@@ -120,7 +120,8 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     CUDA_ERR_CHECK(cudaDeviceSynchronize());
 
     // Requires log2(n) iterations to fully decouple the matrix
-    size_t total_levels = (size_t)ceil(log2((float)n));
+    // size_t total_levels = (size_t)ceil(log2((float)n));
+    size_t total_levels = (size_t)ceil(log2((float)n + 1.));
 
     int grid_size = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
