@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Do not forget to select a proper partition if
+# the default one is no fit for the job!
+
+#SBATCH --output=./logs/out.%j
+#SBATCH --error=./logs/err.%j
+#SBATCH --nodes=1          # number of nodes
+#SBATCH --ntasks=1         # number of processor cores (i.e. tasks)
+#SBATCH --exclusive
+#SBATCH --time=01:00:00    # walltime
+#SBATCH --gres=gpu:1
+#SBATCH --reservation=pram 
+
+# Stop operation on first error.
+set -e
+
+# Load environment modules for your application here.
+source /etc/profile.d/modules.sh
+module purge
+module load cuda/12.0
+
+# Actual work starting here.
+echo "cuBLAS Double Precision Matrix Multiplication"
+echo "========================================="
+echo "2048x2048 matrices:"
+srun ./mm_cuBlas_double.run 2048
+srun ./mm_cuBlas_double.run 2048
+srun ./mm_cuBlas_double.run 2048
+srun ./mm_cuBlas_double.run 2048
+srun ./mm_cuBlas_double.run 2048
+echo ""
+echo "4096x4096 matrices:"
+srun ./mm_cuBlas_double.run 4096
+srun ./mm_cuBlas_double.run 4096
+srun ./mm_cuBlas_double.run 4096
+srun ./mm_cuBlas_double.run 4096
+srun ./mm_cuBlas_double.run 4096
+echo ""
+echo "8192x8192 matrices:"
+srun ./mm_cuBlas_double.run 8192
+srun ./mm_cuBlas_double.run 8192
+srun ./mm_cuBlas_double.run 8192
+srun ./mm_cuBlas_double.run 8192
+srun ./mm_cuBlas_double.run 8192
+echo ""
+echo "16384x16384 matrices:"
+srun ./mm_cuBlas_double.run 16384
+srun ./mm_cuBlas_double.run 16384
+srun ./mm_cuBlas_double.run 16384
+srun ./mm_cuBlas_double.run 16384
+srun ./mm_cuBlas_double.run 16384
+
+echo ""
+
+echo "CUDA Double Precision Matrix Multiplication"
+echo "========================================="
+echo "2048x2048 matrices without tiling:"
+srun ./mm_cuda_double.run 2048 false
+srun ./mm_cuda_double.run 2048 false
+srun ./mm_cuda_double.run 2048 false
+srun ./mm_cuda_double.run 2048 false
+srun ./mm_cuda_double.run 2048 false
+echo ""
+echo "2048x2048 matrices with tiling:"
+srun ./mm_cuda_double.run 2048 true
+srun ./mm_cuda_double.run 2048 true
+srun ./mm_cuda_double.run 2048 true
+srun ./mm_cuda_double.run 2048 true
+srun ./mm_cuda_double.run 2048 true
+echo ""
+echo "4096x4096 matrices without tiling:"
+srun ./mm_cuda_double.run 4096 false
+srun ./mm_cuda_double.run 4096 false
+srun ./mm_cuda_double.run 4096 false
+srun ./mm_cuda_double.run 4096 false
+srun ./mm_cuda_double.run 4096 false
+echo ""
+echo "4096x4096 matrices with tiling:"
+srun ./mm_cuda_double.run 4096 true
+srun ./mm_cuda_double.run 4096 true
+srun ./mm_cuda_double.run 4096 true
+srun ./mm_cuda_double.run 4096 true
+srun ./mm_cuda_double.run 4096 true
+echo ""
+echo "8192x8192 matrices without tiling:"
+srun ./mm_cuda_double.run 8192 false
+srun ./mm_cuda_double.run 8192 false
+srun ./mm_cuda_double.run 8192 false
+srun ./mm_cuda_double.run 8192 false
+srun ./mm_cuda_double.run 8192 false
+echo ""
+echo "8192x8192 matrices with tiling:"
+srun ./mm_cuda_double.run 8192 true
+srun ./mm_cuda_double.run 8192 true
+srun ./mm_cuda_double.run 8192 true
+srun ./mm_cuda_double.run 8192 true
+srun ./mm_cuda_double.run 8192 true
+echo ""
+echo "16384x16384 matrices without tiling:"
+srun ./mm_cuda_double.run 16384 false
+srun ./mm_cuda_double.run 16384 false
+srun ./mm_cuda_double.run 16384 false
+srun ./mm_cuda_double.run 16384 false
+srun ./mm_cuda_double.run 16384 false
+echo ""
+echo "16384x16384 matrices with tiling:"
+srun ./mm_cuda_double.run 16384 true
+srun ./mm_cuda_double.run 16384 true
+srun ./mm_cuda_double.run 16384 true
+srun ./mm_cuda_double.run 16384 true
+srun ./mm_cuda_double.run 16384 true

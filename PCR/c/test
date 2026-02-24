@@ -21,4 +21,12 @@ module load cuda/12.0
 export OMP_NUM_THREADS=1
 
 # Start your application.
-srun nsys profile -f true -o test_simd_inline -t cuda,openmp,nvtx --stats=true ./pcrsolve_omp_gpu.run 50000000
+echo "start cuda"
+srun ./pcrsolve_cuda.run 50000000
+echo "start omp gpu"
+srun ./pcrsolve_omp_gpu.run 50000000
+export OMP_NUM_THREADS=24
+echo "start omp"
+srun --cpus-per-task=24 ./pcrsolve_omp.run 50000000
+# srun nsys profile -f true -o test_simd_inline -t cuda,openmp,nvtx --stats=true ./pcrsolve_omp_gpu.run 50000000
+# srun nsys profile -f true -o cuda_restricted -t cuda,osrt,nvtx --stats=true ./pcrsolve_cuda_nsys.run 50000000
