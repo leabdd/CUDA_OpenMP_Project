@@ -20,9 +20,9 @@ module purge
 module load cuda/12.0
 
 echo "PCRSolveGPU: "
-srun nsys profile -f true -o pcrsolve_cuda -t cuda,osrt,nvtx --stats=true ./pcrsolve_cuda_nsys.run 50000000
+srun nsys profile -f true -o pcrsolve_cuda -t cuda,osrt --stats=true ./pcrsolve_cuda_nsys.run 50000000
 
 echo ""
 
 echo "PCRSolveOMP_GPU: "
-srun nsys profile -f true -o pcrsolve_omp_gpu -t cuda,openmp,nvtx --stats=true ./pcrsolve_omp_gpu.run 50000000
+srun nsys profile -f true -o pcrsolve_omp_gpu -t cuda,openmp,osrt --stats=true ./pcrsolve_omp_gpu.run 50000000

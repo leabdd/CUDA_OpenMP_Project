@@ -67,14 +67,14 @@ int pcr(triSLE_t *sle, timer *start, timer *end) {
     return 0; // Nothing to do
   }
 
-  TIME_GET(*start);
-
   size_t total_levels = (size_t)ceil(log2((float)n + 1.));
 
   float *a_data_tmp = (float *)malloc(n * sizeof(float));
   float *b_data_tmp = (float *)malloc(n * sizeof(float));
   float *c_data_tmp = (float *)malloc(n * sizeof(float));
   float *d_data_tmp = (float *)malloc(n * sizeof(float));
+
+  TIME_GET(*start);
 
   if (a_data_tmp == NULL || b_data_tmp == NULL || c_data_tmp == NULL ||
       d_data_tmp == NULL) {
